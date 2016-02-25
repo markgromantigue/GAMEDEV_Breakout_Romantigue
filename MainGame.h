@@ -105,6 +105,23 @@ public:
 	static Paddle* paddleWithTexture(CCTexture2D* aTexture);
 };
 
+class Floor : public CCSprite
+{
+	PaddleState        m_state;
+	int leftMost, rightMost;
+	int m_floorLength;
+
+public:
+	Floor(void);
+	virtual ~Floor(void);
+
+	CCRect rect();
+	bool initWithTexture(CCTexture2D* aTexture);
+	virtual CCObject* copyWithZone(CCZone *pZone);
+
+	static Floor* floorWithTexture(CCTexture2D* aTexture);
+};
+
 class Extra : public CCSprite
 {
 	CCSprite* m_shadow; //shadow follows the extra sprite
@@ -121,7 +138,8 @@ public:
 	//virtual void draw(void);
 
 	static Extra* createExtra(CCTexture2D* aTexture);
-	bool collidewithPaddle(Paddle* paddle);
+	void collidewithPaddle(Paddle* paddle);
+	void collidewithFloor(Floor* floor);
 	void move(float delta);
 };
 
@@ -141,6 +159,7 @@ public:
 	//virtual void setTexture(CCTexture2D* newTexture);
 	void move(float delta);
 	void collideWithPaddle(Paddle* paddle);
+	void collideWithFloor(Floor* floor);
 	void setBallColor(BallColor color);
 
 
@@ -159,6 +178,7 @@ class GameLayer : public CCLayer
 private:
 	Ball* m_ball;
 	Paddle* m_paddle;
+	Floor* m_floor;
 	Brick* m_brick;
 	CCPoint m_ballVelocity;
 
@@ -188,6 +208,7 @@ public:
 	void addBrick(Brick* brick);
 	void addExtra(Extra* extra);
 	void addPaddle(Paddle* paddle);
+	void addFloor(Floor* floor);
 
 	void removeBall(Ball* ball);
 	void removeBrick(Brick* brick);
@@ -211,6 +232,7 @@ private:
 	CCArray* m_arrayBricks;
 	CCArray* m_arrayExtras;
 	Paddle* m_paddle;
+	Floor* m_floor;
 
 
 };

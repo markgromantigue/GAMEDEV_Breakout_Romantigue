@@ -18,10 +18,7 @@ const float SCALE_FACTOR = 2.0f;
 const float BRICK_SCALE_FACTOR = 1.5f;
 
 static std::string HomeScreenMenuNames[] ={
-		"Game",
-		"Help",
-		"Setting",
-		"About",
+		"Start",
 };
 
 enum HomeScreenMenuButton
@@ -34,9 +31,6 @@ enum HomeScreenMenuButton
 
 static std::string GameMenuNames[] = {
 		"Start",
-		"Levels",
-		"Difficulty",
-		"Player",
 };
 
 enum GameMenuButton

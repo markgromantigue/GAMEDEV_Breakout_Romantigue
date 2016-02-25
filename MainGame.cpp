@@ -1,6 +1,7 @@
 #include "MainGame.h"
 #include "AppDelegate.h"
 #include "SimpleAudioEngine.h"
+#include "GameOverScene.h"
 #include <stdlib.h>
 #include <time.h>
 
@@ -8,7 +9,10 @@ static CCPoint BALL_RECT = ccp(12.0f, 12.0f);
 static CCPoint PADDLE_RECT = ccp(54.0f, 18.0f);
 static CCPoint BRICK_RECT = ccp(40.0f, 20.0f);
 static CCPoint EXTRA_RECT = ccp(40.0f, 20.0f);
-static float EXTRA_DOWNSPEED = 50.0f;
+static CCPoint FLOOR_RECT = ccp(1000.0f, 10.0f);
+static float EXTRA_DOWNSPEED = 200.0f;
+static Label* labelScoreTitle;
+static Label* labelScore;
 
 CCRect GameAreaDef::touchRect;
 CCRect GameAreaDef::BallMoveRect;
@@ -29,10 +33,9 @@ void GameScene::menuCallback(CCObject* pSender)
 
 void GameAreaDef::lazyInit()
 {
-	auto director = Director::getInstance();
-	auto pEGLView = director->getOpenGLView();
-	CCSize visSize = pEGLView->getVisibleSize();
-	CCPoint pointOrigin = pEGLView->getVisibleOrigin();
+	
+	auto visSize = Director::getInstance()->getVisibleSize();
+	auto pointOrigin = Director::getInstance()->getVisibleOrigin();
 
 	if (touchRect.size.width == 0.0f && touchRect.size.height == 0.0f)
 	{
@@ -44,9 +47,9 @@ void GameAreaDef::lazyInit()
 
 	if (BallMoveRect.size.width == 0.0f && BallMoveRect.size.height == 0.0f)
 	{
-		BallMoveRect.size.width = 720;
-		BallMoveRect.size.height = 960;
-		BallMoveRect.origin.x = (visSize.width - touchRect.size.width) / 2 + pointOrigin.x;
+		BallMoveRect.size.width = 800;
+		BallMoveRect.size.height = 500;
+		BallMoveRect.origin.x = (visSize.width - 800) / 2 + pointOrigin.x;
 		BallMoveRect.origin.y = touchRect.getMaxY() + 1;
 	}
 
@@ -153,17 +156,24 @@ void Extra::draw()
 CCSprite::draw();
 }
 */
+void Extra::collidewithFloor(Floor* floor)
+{
+	if (boundingBox().intersectsRect(floor->boundingBox()))
+	{
+		//GameDirector::sharedGameDirector()->setGameStatus(m_bonus);
+		removeFromParent();
+		GameDirector::sharedGameDirector()->removeExtra(this);
+	}
+}
 
-bool Extra::collidewithPaddle(Paddle* paddle)
+void Extra::collidewithPaddle(Paddle* paddle)
 {
 	if (boundingBox().intersectsRect(paddle->boundingBox()))
 	{
 		//GameDirector::sharedGameDirector()->setGameStatus(m_bonus);
 		removeFromParent();
 		GameDirector::sharedGameDirector()->removeExtra(this);
-		return true;
 	}
-	return false;
 }
 
 void Extra::move(float delta)
@@ -325,6 +335,16 @@ void Ball::move(float delta)
 	}
 }
 
+void Ball::collideWithFloor(Floor* floor)
+{
+	if (boundingBox().intersectsRect(floor->boundingBox()))
+	{
+		GameDirector::sharedGameDirector()->init();
+		auto scene = GameOver::createScene();
+		Director::getInstance()->replaceScene(scene);
+	}
+}
+
 void Ball::collideWithPaddle(Paddle* paddle)
 {
 	CCRect paddleRect = paddle->rect();
@@ -390,18 +410,30 @@ GameLayer::GameLayer()
 {
 	//TODO...
 	//create game including loading game data from file,
+	auto size = Director::getInstance()->getVisibleSize();
 
 	CCSprite* background = CCSprite::create("gameBG.jpg");
 	addChild(background);
 	float xBck = (GameAreaDef::getBallMoveRect().getMaxX() + GameAreaDef::getBallMoveRect().getMinX()) / 2;
 	float yBck = (GameAreaDef::getBallMoveRect().getMaxY() + GameAreaDef::getBallMoveRect().getMinY()) / 2;
-	background->setPosition(ccp(xBck, yBck));
+	background->setPosition(ccp(size.width / 2, size.height / 2));
 	background->setScaleY(1.75);
+
+	TTFConfig config("fonts/Marker Felt.ttf", 30);
+	labelScoreTitle = Label::createWithTTF(config, "Score:");
+	addChild(labelScoreTitle);
+	labelScoreTitle->setPosition(ccp(80, 570));
+
+	labelScore = Label::createWithTTF(config, "0");
+	addChild(labelScore);
+	labelScore->setTag(110);
+	labelScore->setPosition(ccp(150, 570));
+
 
 	m_ballVelocity = ccp(40.0f, -400.0f);
 	m_ball = Ball::ballWithTexture(CCTextureCache::sharedTextureCache()->addImage("gfx/balls.png"), CCRectMake(0, 0, 12, 12));
 	m_ball->setVelocity(m_ballVelocity);
-	m_ball->setPosition(ccp(120, 120));
+	m_ball->setPosition(ccp(120, 320));
 	addChild(m_ball);
 	m_ball->retain(); //release from GameDirector
 	GameDirector::sharedGameDirector()->addBall(m_ball);
@@ -409,14 +441,26 @@ GameLayer::GameLayer()
 	CCTexture2D* paddleTexture = CCTextureCache::sharedTextureCache()->addImage("gfx/paddle.png");
 	m_paddle = Paddle::paddleWithTexture(paddleTexture);
 	m_paddle->setTextureRect(CCRectMake(0, 0, 54, 18));
-	m_paddle->setPosition(ccp(54, 20));
+	m_paddle->setPosition(ccp(120, 20));
 	addChild(m_paddle);
 	m_paddle->retain();
 	GameDirector::sharedGameDirector()->addPaddle(m_paddle);
 
-	for (int i = 0; i < 5; i++)
+	CCTexture2D* floorTexture = CCTextureCache::sharedTextureCache()->addImage("gfx/floor.png");
+	m_floor = Floor::floorWithTexture(floorTexture);
+	m_floor->setTextureRect(CCRectMake(0, 0, 1000, 18));
+	m_floor->setPosition(ccp(54, 1));
+	addChild(m_floor);
+	m_floor->retain();
+	GameDirector::sharedGameDirector()->addFloor(m_floor);
+
+	for (int i = 0; i < 11; i++)
 	{
-		addBrick(ccp(100 + 60 * i, 600));
+		addBrick(ccp(100 + 60 * i, 500));
+	}
+	for (int i = 0; i < 11; i++)
+	{
+		addBrick(ccp(100 + 60 * i, 400));
 	}
 	schedule(schedule_selector(GameLayer::update));
 
@@ -576,7 +620,16 @@ Paddle::Paddle(void)
 	rightMost = GameAreaDef::getGameAreaRightMost();
 }
 
+Floor::Floor(void)
+{
+	leftMost = GameAreaDef::getGameAreaLeftMost();
+	rightMost = GameAreaDef::getGameAreaRightMost();
+}
+
 Paddle::~Paddle(void)
+{
+}
+Floor::~Floor(void)
 {
 }
 
@@ -584,6 +637,12 @@ CCRect Paddle::rect()
 {
 	CCPoint s = ccpMult(PADDLE_RECT, SCALE_FACTOR);
 	return CCRectMake(-s.x / 2, -s.y / 2, s.x, s.y); //scale rect of paddle
+}
+
+CCRect Floor::rect()
+{
+	CCPoint a = ccpMult(FLOOR_RECT, SCALE_FACTOR);
+	return CCRectMake(-a.x / 2, -a.y / 2, a.x, a.y); //scale rect of paddle
 }
 
 Paddle* Paddle::paddleWithTexture(CCTexture2D* aTexture)
@@ -596,6 +655,16 @@ Paddle* Paddle::paddleWithTexture(CCTexture2D* aTexture)
 	return pPaddle;
 }
 
+Floor* Floor::floorWithTexture(CCTexture2D* aTexture)
+{
+	Floor* pFloor = new Floor();
+	pFloor->initWithTexture(aTexture);
+	pFloor->setScale(SCALE_FACTOR);
+	pFloor->autorelease();
+
+	return pFloor;
+}
+
 bool Paddle::initWithTexture(CCTexture2D* aTexture)
 {
 	if (CCSprite::initWithTexture(aTexture))
@@ -605,6 +674,16 @@ bool Paddle::initWithTexture(CCTexture2D* aTexture)
 
 	return true;
 }
+bool Floor::initWithTexture(CCTexture2D* aTexture)
+{
+	if (CCSprite::initWithTexture(aTexture))
+	{
+		m_state = kPaddleStateUngrabbed;
+	}
+
+	return true;
+}
+
 
 void Paddle::onEnter()
 {
@@ -671,6 +750,12 @@ CCObject* Paddle::copyWithZone(CCZone *pZone)
 	return this;
 }
 
+CCObject* Floor::copyWithZone(CCZone *pZone)
+{
+	this->retain();
+	return this;
+}
+
 void Paddle::ccTouchEnded(CCTouch* touch, CCEvent* event)
 {
 	CCAssert(m_state == kPaddleStateGrabbed, "Paddle - Unexpected state!");
@@ -727,11 +812,13 @@ void GameDirector::logicUpdate(float delta)
 	}
 
 	CCObject* pObject;
+	CCObject* pObject2;
 	CCARRAY_FOREACH(m_arrayBalls, pObject)
 	{
 		Ball* ball = (Ball*)pObject;
 		ball->move(delta);
 		ball->collideWithPaddle(m_paddle);
+		ball->collideWithFloor(m_floor);
 		//check collision between ball and brick
 		CCObject* pObject1;
 		CCARRAY_FOREACH(m_arrayBricks, pObject1)
@@ -740,6 +827,11 @@ void GameDirector::logicUpdate(float delta)
 
 			if (brick->boundingBox().intersectsRect(ball->boundingBox()))
 			{
+				addGameScore(1000);
+
+				char str_score[20];
+				sprintf(str_score, "%d", getGameScore());
+				labelScore->setString(str_score);
 				//first to check ball status
 				//then to check brick associated bonus
 				//for strong brick, the ball will only crash brick after some hits
@@ -795,11 +887,12 @@ void GameDirector::logicUpdate(float delta)
 		}
 	}
 
-	CCARRAY_FOREACH(m_arrayExtras, pObject)
+	CCARRAY_FOREACH(m_arrayExtras, pObject2)
 	{
-		Extra* extra = (Extra*)pObject;
+		Extra* extra = (Extra*)pObject2;
 		extra->move(delta);
-		extra->collidewithPaddle(m_paddle);
+		extra->collidewithFloor(m_floor);
+		//extra->collidewithPaddle(m_paddle);
 	}
 }
 
@@ -1114,6 +1207,7 @@ void GameDirector::resetAllBallStatus()
 	{
 		m_ballStatus[i].isEnabled = false;
 		m_ballStatus[i].periodInFrame = 0;
+
 	}
 }
 
@@ -1164,4 +1258,9 @@ void GameDirector::removeExtra(Extra* extra)
 void GameDirector::addPaddle(Paddle* paddle)
 {
 	m_paddle = paddle;
+}
+
+void GameDirector::addFloor(Floor* floor)
+{
+	m_floor = floor;
 }

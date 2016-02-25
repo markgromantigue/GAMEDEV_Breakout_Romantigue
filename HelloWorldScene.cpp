@@ -53,7 +53,7 @@ void GameMenuLayer::onEnter()
 {
 	CCLayer::onEnter();
 
-	CCSize size = CCDirector::sharedDirector()->getWinSize();
+	auto size = Director::getInstance()->getWinSize();
 
 	CCMenu* pMenu = CCMenu::create();
 
@@ -135,36 +135,28 @@ CCScene* HelloWorld::scene()
 	return scene;
 }
 
-// on "init" you need to initialize your instance
 bool HelloWorld::init()
 {
-	//////////////////////////////
-	// 1. super init first
+
 	if (!CCLayer::init())
 	{
 		return false;
 	}
 
-	CCSize size = CCDirector::sharedDirector()->getWinSize();
+	auto size = Director::getInstance()->getWinSize();
 
-	/////////////////////////////
-	// 2. add a menu item with "X" image, which is clicked to quit the program
-	//    you may modify it.
 
-	/////////////////////////////
-	// 3. add your codes below...
-
-	//title
-	CCLabelBMFont* titleFont = CCLabelBMFont::create("Breakout", "futura-48.fnt", 80);
-	addChild(titleFont);
-	titleFont->setPosition(ccp(size.width / 2, size.height - 200));
+	
+	auto spriteBG = Sprite::create("breakoutBG.png");
+	addChild(spriteBG);
+	spriteBG->setPosition(ccp(size.width / 2, size.height / 2));
 
 	//add menu
 	CCMenu* pItemMenu = CCMenu::create();
 	for (int i = 0; i < HomeScreenMenuCount; i++)
 	{
 		CCLabelBMFont* label = CCLabelBMFont::create(HomeScreenMenuNames[i].c_str(), "futura-48.fnt", 48);
-		CCMenuItemLabel* pMenu = CCMenuItemLabel::create(label, this, menu_selector(HelloWorld::menuCallback));
+		CCMenuItemLabel* pMenu = CCMenuItemLabel::create(label, this, menu_selector(GameMenuLayer::menuCallback));
 		pItemMenu->addChild(pMenu, i + 1000);
 		pMenu->setPosition(ccp(size.width / 2, size.height - (i + 2) * 200));
 	}
