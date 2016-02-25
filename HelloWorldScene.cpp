@@ -1,86 +1,201 @@
 #include "HelloWorldScene.h"
+#include "SimpleAudioEngine.h"
+#include "cocos2d.h"
+#include "constant.h"
+#include "MainGame.h"
 
 USING_NS_CC;
+using namespace CocosDenshion;
 
-Scene* HelloWorld::createScene()
+static int HomeScreenMenuCount = sizeof(HomeScreenMenuNames) / sizeof(*HomeScreenMenuNames);
+static int GameMenuCount = sizeof(GameMenuNames) / sizeof(*GameMenuNames);
+
+FirstLevelMenuScene::FirstLevelMenuScene(bool bPortrait)
 {
-    // 'scene' is an autorelease object
-    auto scene = Scene::create();
-    
-    // 'layer' is an autorelease object
-    auto layer = HelloWorld::create();
+	CCScene::init();
+}
 
-    // add layer as a child to scene
-    scene->addChild(layer);
+void FirstLevelMenuScene::onEnter()
+{
+	CCScene::onEnter();
 
-    // return the scene
-    return scene;
+	CCMenuItemImage* pBackItem = CCMenuItemImage::create(
+		"back.png",
+		"back_big.png",
+		this,
+		menu_selector(FirstLevelMenuScene::ManiMenuCallback));
+	CCMenu* pMenu = CCMenu::create(pBackItem, NULL);
+
+	CCSize backSize = pBackItem->getContentSize();
+
+	pMenu->setPosition(ccp(backSize.width, backSize.height));
+
+	addChild(pMenu, 1);
+}
+
+void FirstLevelMenuScene::ManiMenuCallback(CCObject* pSender)
+{
+	CCScene* pScene = HelloWorld::scene();
+	CCDirector::sharedDirector()->replaceScene(pScene);
+}
+
+void GameMenuScene::runThisScene()
+{
+	CCLayer* pLayer = new GameMenuLayer();
+	pLayer->init();
+	pLayer->autorelease();
+	addChild(pLayer);
+
+	CCDirector::sharedDirector()->replaceScene(this);
+}
+
+void GameMenuLayer::onEnter()
+{
+	CCLayer::onEnter();
+
+	CCSize size = CCDirector::sharedDirector()->getWinSize();
+
+	CCMenu* pMenu = CCMenu::create();
+
+	for (int i = 0; i < GameMenuCount; i++)
+	{
+		CCLabelBMFont* label = CCLabelBMFont::create(GameMenuNames[i].c_str(), "futura-48.fnt", 48);
+		CCMenuItemLabel* menuItem = CCMenuItemLabel::create(label, this, menu_selector(GameMenuLayer::menuCallback));
+		pMenu->addChild(menuItem, i + 1000);
+		menuItem->setPosition(ccp(size.width / 2, size.height - (i + 1) * 200));
+	}
+	pMenu->setPosition(Vec2::ZERO);
+	addChild(pMenu);
+
+}
+
+void GameMenuLayer::onExit()
+{
+	CCLayer::onExit();
+}
+
+void GameMenuLayer::menuCallback(CCObject* pSender)
+{
+	CCMenuItem* menuItem = (CCMenuItem*)(pSender);
+	int nIdx = menuItem->getZOrder() - 1000;
+
+	if (nIdx == GAME_MENU_START)
+	{
+		GameScene* pScene = new GameScene();
+		pScene->runThisTest();
+		pScene->release();
+	}
+}
+
+CCScene* GameMenuLayer::scene()
+{
+	CCScene* scene = CCScene::create();
+
+	GameMenuLayer* layer = GameMenuLayer::create();
+
+	scene->addChild(layer);
+
+	return scene;
+}
+static FirstLevelMenuScene* CreateScene(int nIdx)
+{
+	CCDirector::sharedDirector()->purgeCachedData();
+
+	FirstLevelMenuScene* pScene = NULL;
+
+	switch (nIdx)
+	{
+	case SCENE_GAME:
+		pScene = new GameMenuScene();
+		break;
+	case SCENE_HELP:
+		break;
+	case SCENE_SETTING:
+		break;
+	case SCENE_ABOUT:
+		break;
+	}
+
+	return pScene;
+}
+
+
+CCScene* HelloWorld::scene()
+{
+	// 'scene' is an autorelease object
+	CCScene *scene = CCScene::create();
+
+	// 'layer' is an autorelease object
+	HelloWorld *layer = HelloWorld::create();
+
+	// add layer as a child to scene
+	scene->addChild(layer);
+
+	// return the scene
+	return scene;
 }
 
 // on "init" you need to initialize your instance
 bool HelloWorld::init()
 {
-    //////////////////////////////
-    // 1. super init first
-    if ( !Layer::init() )
-    {
-        return false;
-    }
-    
-    Size visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+	//////////////////////////////
+	// 1. super init first
+	if (!CCLayer::init())
+	{
+		return false;
+	}
 
-    /////////////////////////////
-    // 2. add a menu item with "X" image, which is clicked to quit the program
-    //    you may modify it.
+	CCSize size = CCDirector::sharedDirector()->getWinSize();
 
-    // add a "close" icon to exit the progress. it's an autorelease object
-    auto closeItem = MenuItemImage::create(
-                                           "CloseNormal.png",
-                                           "CloseSelected.png",
-                                           CC_CALLBACK_1(HelloWorld::menuCloseCallback, this));
-    
-	closeItem->setPosition(Vec2(origin.x + visibleSize.width - closeItem->getContentSize().width/2 ,
-                                origin.y + closeItem->getContentSize().height/2));
+	/////////////////////////////
+	// 2. add a menu item with "X" image, which is clicked to quit the program
+	//    you may modify it.
 
-    // create menu, it's an autorelease object
-    auto menu = Menu::create(closeItem, NULL);
-    menu->setPosition(Vec2::ZERO);
-    this->addChild(menu, 1);
+	/////////////////////////////
+	// 3. add your codes below...
 
-    /////////////////////////////
-    // 3. add your codes below...
+	//title
+	CCLabelBMFont* titleFont = CCLabelBMFont::create("Breakout", "futura-48.fnt", 80);
+	addChild(titleFont);
+	titleFont->setPosition(ccp(size.width / 2, size.height - 200));
 
-    // add a label shows "Hello World"
-    // create and initialize a label
-    
-    auto label = Label::createWithTTF("Hello World", "fonts/Marker Felt.ttf", 24);
-    
-    // position the label on the center of the screen
-    label->setPosition(Vec2(origin.x + visibleSize.width/2,
-                            origin.y + visibleSize.height - label->getContentSize().height));
+	//add menu
+	CCMenu* pItemMenu = CCMenu::create();
+	for (int i = 0; i < HomeScreenMenuCount; i++)
+	{
+		CCLabelBMFont* label = CCLabelBMFont::create(HomeScreenMenuNames[i].c_str(), "futura-48.fnt", 48);
+		CCMenuItemLabel* pMenu = CCMenuItemLabel::create(label, this, menu_selector(HelloWorld::menuCallback));
+		pItemMenu->addChild(pMenu, i + 1000);
+		pMenu->setPosition(ccp(size.width / 2, size.height - (i + 2) * 200));
+	}
+	pItemMenu->setPosition(Vec2::ZERO);
+	addChild(pItemMenu, 2);
 
-    // add the label as a child to this layer
-    this->addChild(label, 1);
 
-    // add "HelloWorld" splash screen"
-    auto sprite = Sprite::create("HelloWorld.png");
+	setTouchEnabled(true);
 
-    // position the sprite on the center of the screen
-    sprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-
-    // add the sprite as a child to this layer
-    this->addChild(sprite, 0);
-    
-    return true;
+	return true;
 }
-
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
-    Director::getInstance()->end();
+	CCDirector::sharedDirector()->end();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
-    exit(0);
+	exit(0);
 #endif
+}
+
+void HelloWorld::menuCallback(Ref* pSender)
+{
+	CCMenuItem* pMenuItem = (CCMenuItem*)(pSender);
+	int nIdx = pMenuItem->getZOrder() - 1000;
+
+	//create the scene and run it
+	FirstLevelMenuScene* pScene = CreateScene(nIdx);
+	if (pScene)
+	{
+		pScene->runThisScene();
+		pScene->release();
+	}
 }
