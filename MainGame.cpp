@@ -2,8 +2,11 @@
 #include "AppDelegate.h"
 #include "SimpleAudioEngine.h"
 #include "GameOverScene.h"
+#include "WinScene.h"
 #include <stdlib.h>
 #include <time.h>
+
+using namespace CocosDenshion;
 
 static CCPoint BALL_RECT = ccp(12.0f, 12.0f);
 static CCPoint PADDLE_RECT = ccp(54.0f, 18.0f);
@@ -247,6 +250,7 @@ bool Brick::collideWithBall(Ball* ball)
 void Brick::brickCrashedByBall(Ball* ball)
 {
 	//0.create extra according to current brick's attribute
+	SimpleAudioEngine::getInstance()->playEffect("Laser 02.wav");
 	CCTexture2D* extraTexture = CCTextureCache::sharedTextureCache()->addImage("gfx/extras.png");
 	Extra* extra = Extra::createExtra(extraTexture);
 	extra->setBonusType(SCORE_1000); //this should be changed to the bonus type associated with brick in future
@@ -374,6 +378,7 @@ void Ball::collideWithPaddle(Paddle* paddle)
 
 		if (hit)
 		{
+			SimpleAudioEngine::getInstance()->playEffect("Hard hit.wav");
 			float hitAngle = ccpToAngle(ccpSub(paddle->getPosition(), getPosition())) + angleOffset;
 
 			float scalarVelocity = ccpLength(m_velocity) * 1.05f;
@@ -409,6 +414,9 @@ void GameLayer::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
 GameLayer::GameLayer()
 {
 	//TODO...
+
+	SimpleAudioEngine::getInstance()->playBackgroundMusic("ButtonMasher.wav", true);
+
 	//create game including loading game data from file,
 	auto size = Director::getInstance()->getVisibleSize();
 
@@ -502,13 +510,20 @@ GameLayer::~GameLayer()
 
 void GameLayer::update(float delta)
 {
-	if (std::find(heldKeys.begin(), heldKeys.end(), RIGHT_ARROW) != heldKeys.end()){
+	if ((std::find(heldKeys.begin(), heldKeys.end(), RIGHT_ARROW) != heldKeys.end()) && m_paddle->getPosition().x < 750){
 		m_paddle->setPosition(ccp(m_paddle->getPosition().x + 10, 20));
 	}
 
-	if (std::find(heldKeys.begin(), heldKeys.end(), LEFT_ARROW) != heldKeys.end()){
+	if ((std::find(heldKeys.begin(), heldKeys.end(), LEFT_ARROW) != heldKeys.end()) && m_paddle->getPosition().x > 54){
 		m_paddle->setPosition(ccp(m_paddle->getPosition().x - 10, 20));
 	}
+
+	if (GameDirector::sharedGameDirector()->getArrayBricks()->count() == 0){
+		GameDirector::sharedGameDirector()->init();
+		auto scene = Win::createScene();
+		Director::getInstance()->replaceScene(scene);
+	}
+
 	//this is mainly function to control the whole game
 	//it should update components' movement and check interaction between components
 	//it should also control the whole game layer display
@@ -827,6 +842,8 @@ void GameDirector::logicUpdate(float delta)
 
 			if (brick->boundingBox().intersectsRect(ball->boundingBox()))
 			{
+				
+
 				addGameScore(1000);
 
 				char str_score[20];
